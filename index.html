@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="controls">
+        <button id="play-pause-btn" class="btn">
+            <span id="icon">⏸</span> <span id="text">Pause</span>
+        </button>
+        <button id="settings-btn" class="btn">
+            <span>⚙️</span> Settings
+        </button>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="settings-panel hidden">
+        <div class="settings-header">
+            <h3>Rotation Speeds</h3>
+            <button id="close-settings" class="close-btn">×</button>
+        </div>
+        <div id="sliders-container">
+            <!-- Sliders will be injected by JS -->
+        </div>
+    </div>
+
+    <!-- Labels Container -->
+    <div id="labels-container"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
