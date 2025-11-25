@@ -75,23 +75,46 @@ function generateGlowTexture() {
     return canvas;
 }
 
-// Planets Data
+// Planets Data (Inclinations in degrees)
 const planetsData = [
-    { name: 'Mercury', radius: 2, distance: 20, speed: 0.02, rotationSpeed: 0.004, texture: 'textures/mercury.png' },
-    { name: 'Venus', radius: 3, distance: 30, speed: 0.015, rotationSpeed: 0.002, texture: 'textures/venus.png' },
-    { name: 'Earth', radius: 3.2, distance: 45, speed: 0.01, rotationSpeed: 0.02, texture: 'textures/earth.png' },
-    { name: 'Mars', radius: 2.5, distance: 60, speed: 0.008, rotationSpeed: 0.018, texture: 'textures/mars.png' },
-    { name: 'Jupiter', radius: 8, distance: 90, speed: 0.004, rotationSpeed: 0.04, texture: 'textures/jupiter.png' },
-    { name: 'Saturn', radius: 7, distance: 130, speed: 0.003, rotationSpeed: 0.038, texture: 'textures/saturn.png', hasRing: true },
-    { name: 'Uranus', radius: 5, distance: 170, speed: 0.002, rotationSpeed: 0.03, color: 0x7ED6DF }, // No texture fallback
-    { name: 'Neptune', radius: 5, distance: 210, speed: 0.001, rotationSpeed: 0.032, color: 0x4834D4 } // No texture fallback
+    { name: 'Mercury', radius: 2, distance: 20, speed: 0.02, rotationSpeed: 0.004, texture: 'textures/mercury.png', inclination: 7.0, node: Math.random() * Math.PI * 2 },
+    { name: 'Venus', radius: 3, distance: 30, speed: 0.015, rotationSpeed: 0.002, texture: 'textures/venus.png', inclination: 3.4, node: Math.random() * Math.PI * 2 },
+    { name: 'Earth', radius: 3.2, distance: 45, speed: 0.01, rotationSpeed: 0.02, texture: 'textures/earth.png', inclination: 0.0, node: 0 },
+    { name: 'Mars', radius: 2.5, distance: 60, speed: 0.008, rotationSpeed: 0.018, texture: 'textures/mars.png', inclination: 1.9, node: Math.random() * Math.PI * 2 },
+    { name: 'Jupiter', radius: 8, distance: 90, speed: 0.004, rotationSpeed: 0.04, texture: 'textures/jupiter.png', inclination: 1.3, node: Math.random() * Math.PI * 2 },
+    { name: 'Saturn', radius: 7, distance: 130, speed: 0.003, rotationSpeed: 0.038, texture: 'textures/saturn.png', hasRing: true, inclination: 2.5, node: Math.random() * Math.PI * 2 },
+    { name: 'Uranus', radius: 5, distance: 170, speed: 0.002, rotationSpeed: 0.03, color: 0x7ED6DF, inclination: 0.8, node: Math.random() * Math.PI * 2 },
+    { name: 'Neptune', radius: 5, distance: 210, speed: 0.001, rotationSpeed: 0.032, color: 0x4834D4, inclination: 1.8, node: Math.random() * Math.PI * 2 }
 ];
 
 const planets = [];
 const labelsContainer = document.getElementById('labels-container');
 
 planetsData.forEach(data => {
-    // Planet Mesh
+    // 1. Orbital Plane Group (Handles Inclination & Node)
+    const orbitalPlane = new THREE.Group();
+
+    // Apply Longitude of Ascending Node (Rotation around Y-axis - Ecliptic Pole)
+    orbitalPlane.rotation.y = data.node;
+
+    // Apply Inclination (Rotation around X or Z axis relative to Node)
+    // We rotate around X to tilt the plane
+    orbitalPlane.rotation.x = THREE.MathUtils.degToRad(data.inclination);
+
+    scene.add(orbitalPlane);
+
+    // 2. Orbit Path (Visual Ring) - Added to Orbital Plane
+    const orbitGeometry = new THREE.RingGeometry(data.distance - 0.1, data.distance + 0.1, 128);
+    const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.1 });
+    const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+    orbit.rotation.x = Math.PI / 2; // Lay flat on the orbital plane
+    orbitalPlane.add(orbit);
+
+    // 3. Planet Pivot (Handles Revolution around Sun) - Added to Orbital Plane
+    const planetPivot = new THREE.Group();
+    orbitalPlane.add(planetPivot);
+
+    // 4. Planet Mesh - Added to Pivot
     const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
     let material;
     if (data.texture) {
@@ -101,32 +124,19 @@ planetsData.forEach(data => {
     }
     const planet = new THREE.Mesh(geometry, material);
 
-    // Orbit Group (Pivot)
-    const orbitGroup = new THREE.Group();
-    orbitGroup.add(planet);
-    scene.add(orbitGroup);
-
-    // Initial Position
+    // Position planet at distance from center
     planet.position.x = data.distance;
-
-    // Orbit Path (Visual)
-    const orbitGeometry = new THREE.RingGeometry(data.distance - 0.1, data.distance + 0.1, 128);
-    const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.1 });
-    const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
-    orbit.rotation.x = Math.PI / 2;
-    scene.add(orbit);
+    planetPivot.add(planet);
 
     // Saturn Ring
     if (data.hasRing) {
         const ringGeometry = new THREE.RingGeometry(data.radius + 2, data.radius + 6, 64);
         const ringMaterial = new THREE.MeshBasicMaterial({
-            map: textureLoader.load('textures/saturn.png'), // Reuse saturn texture for ring color variation
+            map: textureLoader.load('textures/saturn.png'),
             side: THREE.DoubleSide,
             transparent: true,
             opacity: 0.8
         });
-        // Adjust UVs for ring mapping if needed, or just use simple color
-        // For simplicity, let's use a basic color ring if texture looks weird, but let's try texture
         const ring = new THREE.Mesh(ringGeometry, ringMaterial);
         ring.rotation.x = Math.PI / 2;
         planet.add(ring);
@@ -138,10 +148,16 @@ planetsData.forEach(data => {
     labelDiv.textContent = data.name;
     labelsContainer.appendChild(labelDiv);
 
-    planets.push({ mesh: planet, group: orbitGroup, data: data, label: labelDiv });
+    // Store references for animation
+    planets.push({
+        mesh: planet,
+        pivot: planetPivot,
+        data: data,
+        label: labelDiv
+    });
 });
 
-camera.position.set(0, 100, 200);
+camera.position.set(0, 50, 250); // Lower camera to see inclination better
 controls.update();
 
 let isPlaying = true; // Auto-play by default for 3D
@@ -166,10 +182,10 @@ function animate() {
 
     if (isPlaying) {
         planets.forEach(obj => {
-            // Orbit (Revolution)
-            obj.group.rotation.y += obj.data.speed;
+            // Orbit (Revolution) - Rotate the Pivot
+            obj.pivot.rotation.y += obj.data.speed;
 
-            // Spin (Rotation)
+            // Spin (Rotation) - Rotate the Mesh
             obj.mesh.rotation.y += obj.data.rotationSpeed;
         });
     }
